@@ -1,3 +1,4 @@
+import datetime
 import re
 
 from bs4 import BeautifulSoup
@@ -21,7 +22,7 @@ LOCATION = {
 }
 
 class TimeBlock:
-    def __init__(self, course_title, block_type,location, instructor, days = "", start_time = "", end_time = ""):
+    def __init__(self, course_title, block_type, location, instructor, days = "", start_time = "", end_time = ""):
         self.course_title = course_title
         self.block_type = block_type
         self.days = days
@@ -29,6 +30,17 @@ class TimeBlock:
         self.end_time = end_time
         self.location = location
         self.instructor = instructor
+
+    def add_time_info(self, info):
+        # info format is 'Tue, 08:15 - 10:00'
+        day = info.split(",")[0]
+        time = info.split(",")[1].split(" - ")
+        if self.days == "":
+            self.days = day
+            self.start_time = datetime.datetime.strptime(time[0].strip(), "%H:%M").time()
+            self.end_time = datetime.datetime.strptime(time[1].strip(), "%H:%M").time()
+        else:
+            self.days += "," + day
 
 class Course:
     def __init__(self, course_title, course_subtitle, session, term, instructor, units, schedule):
@@ -51,7 +63,6 @@ def extract_courses(soup):
     for course_box in soup.find_all('div', class_='course_box block_animation show_extras be0'):
         course = extract_course_info_from_list(course_box)
         courses[course.course_title] = course
-        print(course)
 
     # Extract course info from the calendar
     # for time_block in soup.find_all('div', class_='time_block'):
@@ -84,8 +95,19 @@ def extract_course_info_from_list(course_box):
     instructor = course_box.find('div', title='Instructor(s)').text.strip()
     units = course_box.find('div', class_='credits_block').text.strip()
     table = course_box.find('table', class_='inner_legend_table')
+    
+    # Splits into the start and end dates
+    term_temp = term_label.split(" - ")
+    term = {}
+    current_year = datetime.datetime.now().year
+    term['Start'] = datetime.datetime.strptime(term_temp[0], "%b %d")
+    term['Start'] = term['Start'].replace(year=current_year)
+    term['End'] = datetime.datetime.strptime(term_temp[1], "%b %d")
+    term['End'] = term['End'].replace(year=current_year)
 
-    schedule = []
+    print(term['Start'], term['End'])
+    
+    schedule = {}
     for row in table.find_all('tr'):
         if row.find('td', class_='notes'):
             continue
@@ -94,9 +116,10 @@ def extract_course_info_from_list(course_box):
         if len(location) > 1:
             location[-1] = "Room " + location[-1]
         block = TimeBlock(course_title=course_title, block_type=block_type, location=location, instructor=instructor)
-        schedule.append(block)
+        # [:3] is to get the abbreviation of the block type only, ex "LEC" instead of "LEC AA"
+        schedule[block_type[:3]] = block
 
-    course = Course(course_title, course_subtitle, session_label, term_label, instructor, units, schedule)
+    course = Course(course_title, course_subtitle, session_label, term, instructor, units, schedule)
 
     return course
 
@@ -115,28 +138,59 @@ def read_html(name):
         return f.read()
 
 
-def extract_calendar(soup, course):
-    pass
+def separate_course_info(text):
+    # separate SOEN 287LEC into SOEN 287 and LEC
+    course_pattern = r"([A-Za-z]+)(\s*\d+)([A-Za-z]+)"
+    match = re.match(course_pattern, text)
+    if match:
+        crs_abbreviation, crs_number, block_type = match.groups()
+        course_title = f"{crs_abbreviation}{crs_number}"
+        return course_title, block_type
+    else:
+        return None, None
+
+
+def extract_calendar(soup, courses):
+    table = soup.find('table', class_='class-schedule__calendar')
+    for hour in table.find_all('tr'):
+        for day in hour.find_all('td'):
+            course_info = day.find('span', class_='class-label')
+            if course_info:
+                course_title, block_type = separate_course_info(course_info.text)
+                info = day.find('div', class_='class-info')
+                # split time by <br> tag
+                info = info.get_text(separator='<br>').split('<br>')
+                # leave only time
+                info = info[1]
+                courses[course_title].schedule[block_type].add_time_info(info)
+
+
+    return courses
+
+
+
 
 
 def main():
 
     crs_list = read_html('summer_1.html')
     soup = BeautifulSoup(crs_list, 'html.parser')
-    course = extract_courses(soup)
+    courses = extract_courses(soup)
     # Extract times from the calendar
     summer = True
     if summer:
         summer_1 = read_html('summer_1_calendar.html')
         soup = BeautifulSoup(summer_1, 'html.parser')
-        course = extract_calendar(soup, course)
+        courses = extract_calendar(soup, courses)
         summer_2 = read_html('summer_2_calendar.html')
         soup = BeautifulSoup(summer_2, 'html.parser')
-        course = extract_calendar(soup, course)
+        courses = extract_calendar(soup, courses)
     else:
         term = read_html('calendar.html')
         soup = BeautifulSoup(term, 'html.parser')
-        course = extract_calendar(soup, course)
+        courses = extract_calendar(soup, courses)
+        
+    return courses
 
 
 # Press the green button in the gutter to run the script.

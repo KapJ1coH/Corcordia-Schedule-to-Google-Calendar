@@ -21,6 +21,34 @@ LOCATION = {
 
 }
 
+"""
+New format:
+ - Grab all the course info from the course cart
+ - Grab university closed dates from the academic calendar
+ 
+ - Make the program event based
+    - For each course, create a list of events
+    - Each event should have a start date, end date, start time, end time, location, instructor and days of the week
+    - Each event should have a recurrence rule
+    - Allow for multiple days per block
+    - Represent days in this format: 'MO,TU,WE,TH,FR'
+    - Add a recurrence rule for each
+
+- Course, Event are both objects
+- Course has a list of events and general course info
+- Course contains start and end date, course instructor, course title, course subtitle, course number, course section, course session, course credits
+- Event contains start and end time, location, days of the week, recurrence rule
+    - Location should be a tuple of (building, room)
+    - Building should be a string with the full address
+    - No location --> Empty string
+    
+- Enable event deletion and modification
+    - Delete all events for a course
+    - Delete all events for a course on a specific day
+    - Modify based on data stored in a file.
+    
+"""
+
 
 class TimeBlock:
     def __init__(self, course_title, block_type, location, instructor, start_date=None, days="", start_time="",

@@ -6,10 +6,14 @@ from bs4 import BeautifulSoup
 
 LOCATION = {
     "Hall Building": "1455 de Maisonneuve Boulevard West",
+    "H": "1455 de Maisonneuve Boulevard West",
     "Learning square": "1535 de Maisonneuve Boulevard West",
+    "LS": "1535 de Maisonneuve Boulevard West",
     "John Molson Building": "1450 Guy Street",
+    "MB": "1450 Guy Street",
     "EV Building": "1515 Sainte-Catherine Street West",
     "Faubourg Building": "1250 Guy Street",
+    "FB": "1250 Guy Street",
     "Grey Nuns Building": "1190 Guy Street",
     "Guy-Metro Building": "1616 Sainte-Catherine Street West",
     "J.W. McConnell Building": "1400 De Maisonneuve Boulevard West",
@@ -60,7 +64,8 @@ class TimeBlock:
     Represents a single event in a course.
     """
 
-    def __init__(self, start_date, end_date, start_time, end_time, days, building, room, instructor):
+    def __init__(self, start_date, end_date, start_time, end_time, days, building, room, instructor, class_number,
+                 section):
         """
         :type start_date: datetime        :type end_date:
         :param start_date: Class start date
@@ -71,6 +76,8 @@ class TimeBlock:
         :param building: Building the class is in
         :param room: Room the class is in
         :param instructor: Instructor of the class
+        :param class_number: Class number
+        :param section: Class section
         """
         self.start_date = start_date
         self.end_date = end_date
@@ -80,6 +87,8 @@ class TimeBlock:
         self.building = building
         self.room = room
         self.instructor = instructor
+        self.class_number = class_number
+        self.section = section
 
     def next_weekday(self, start_date, day):
         match day:
@@ -100,6 +109,19 @@ class TimeBlock:
             case _:
                 return start_date
 
+    # to string method
+    def __str__(self):
+        return f"Start date: {self.start_date}\n" \
+               f"End date: {self.end_date}\n" \
+               f"Start time: {self.start_time}\n" \
+               f"End time: {self.end_time}\n" \
+               f"Days: {self.days}\n" \
+               f"Building: {self.building}\n" \
+               f"Room: {self.room}\n" \
+               f"Instructor: {self.instructor}\n" \
+               f"Class number: {self.class_number}\n" \
+               f"Section: {self.section}\n"
+
 
 class Course:
     """
@@ -117,6 +139,10 @@ class Course:
         self.events = events
 
 
+class BreakLoopException(Exception):
+    pass
+
+
 def parse_course_cart():
     """
     Goes through the html table, and parses the course cart.
@@ -128,7 +154,7 @@ def parse_course_cart():
 
     units_regex = re.compile(r'DERIVED_REGFRM1_UNT_TAKEN$\d+')
 
-    count = 0;
+    count = 0
 
     for i, block in enumerate(table.findChildren('tr', recursive=False)):
         count = go_thru_each_class(block, count, i)
@@ -136,8 +162,17 @@ def parse_course_cart():
 
 
 def go_thru_each_class(block, count, i):
+    """
+    Goes through each class in the table of usually 5 classes.
+    It will be later merged into a dictionary with a key of the class name and a value of the class object.
+    :param block: Soup object of the class block
+    :param count: count used in the next method
+    :param i: Used to find unique ids of classes
+    :return:
+    """
     class_name = block.find('h3', class_="ui-bar").text
     units = block.find('span', id=f'DERIVED_REGFRM1_UNT_TAKEN${i}').text
+    time_blocks = []
     for row in block.find('table', id=f"CLASS_MTG_VW$scroll${i}").find('table', class_='ui-table').find(
             'tbody').findAll('tr'):
         """
@@ -145,24 +180,59 @@ def go_thru_each_class(block, count, i):
         3103 CCCG Tutorial MoWe 6:30PM - 8:10PM H 521 SGW JOUMANA DARGHAM 
         03/07/2023 - 10/08/2023
         """
-        cls_number = ""
-        if not (cls_number := row.find('span', id=f"DERIVED_CLS_DTL_CLASS_NBR${count}")):
-            print("No class number found")
+        try:
+            count, time_block = go_thru_each_timeblock(count, row)
+        except BreakLoopException:
             continue
-        cls_number = cls_number.text
-        cls_section = row.find('a', id=f"MTG_SECTION${count}").text
-        # :3 to shorten from Lecture to Lec
-        cls_component = row.find('span', id=f"MTG_COMP${count}").text[:3]
-        # make it in the proper format
-        cls_day_time = row.find('span', id=f"MTG_SCHED${count}").text
-        days, start_time, end_time = clean_cls_day_time(cls_day_time)
-        cls_room = row.find('span', id=f"MTG_LOC${count}").text
-        cls_instructor = row.find('span', id=f"DERIVED_CLS_DTL_SSR_INSTR_LONG${count}").text
-        cls_start_end = row.find('span', id=f"MTG_DATES${count}").text
-        print(cls_number ,cls_section, cls_component, cls_day_time, cls_room, cls_instructor, cls_start_end)
-        count += 1
+        time_blocks.append(time_block)
 
     return count
+
+
+def go_thru_each_timeblock(count, row):
+    """
+    Goes through each time block in a course.
+
+    :param count: Count of the ui element since each element has a unique id, an int is appended to the end of the id
+    :param row: One specific class/time block
+    :return: Count: Updated count, time_block: TimeBlock object
+    """
+    cls_number = ""
+    if not (cls_number := row.find('span', id=f"DERIVED_CLS_DTL_CLASS_NBR${count}")):
+        print("No class number found")
+        raise BreakLoopException
+
+    cls_number = cls_number.text
+    cls_section = row.find('a', id=f"MTG_SECTION${count}").text
+
+    # :3 to shorten from Lecture to Lec
+    cls_component = row.find('span', id=f"MTG_COMP${count}").text[:3]
+
+    cls_day_time = row.find('span', id=f"MTG_SCHED${count}").text
+    days, start_time, end_time = clean_cls_day_time(cls_day_time)
+
+    cls_room = row.find('span', id=f"MTG_LOC${count}").text
+    building, room = clean_cls_room(cls_room)
+    cls_instructor = row.find('span', id=f"DERIVED_CLS_DTL_SSR_INSTR_LONG${count}").text
+
+    cls_dates = row.find('span', id=f"MTG_DATES${count}").text
+    start_date, end_date = clean_cls_dates(cls_dates)
+
+    cls = TimeBlock(
+        class_number=cls_number,
+        section=cls_section,
+        days=days,
+        start_time=start_time,
+        end_time=end_time,
+        building=building,
+        room=room,
+        instructor=cls_instructor,
+        start_date=start_date,
+        end_date=end_date,
+    )
+    print(cls)
+    count += 1
+    return count, cls
 
 
 def clean_cls_day_time(cls_day_time):
@@ -172,11 +242,50 @@ def clean_cls_day_time(cls_day_time):
     :return: String, String, datetime.time, datetime.time. Ex: MO,WE,18:30,20:10
     """
     days, time = cls_day_time.split(' ', 1)
-    print(days, time)
+    # Split days string into groups of 2 strings. Ex: MoWe -> [MO, WE]
+    days = [days[i:i + 2].upper() for i in range(0, len(days), 2)]
     start_time, end_time = time.split(' - ')
     start_time = datetime.strptime(start_time, '%I:%M%p').time()
     end_time = datetime.strptime(end_time, '%I:%M%p').time()
     return days, start_time, end_time
+
+
+def clean_cls_dates(cls_dates):
+    """
+    Transform a string of dates into a tuple of start and end dates.
+    :param cls_dates: String. Ex: 03/07/2023 - 10/08/2023
+    :return: datetime.date, datetime.date. Ex: 2023-03-07, 2023-10-08
+    """
+    start_date, end_date = cls_dates.split(' - ')
+    start_date = datetime.strptime(start_date, '%d/%m/%Y').date()
+    end_date = datetime.strptime(end_date, '%d/%m/%Y').date()
+    return start_date, end_date
+
+
+def clean_cls_room(cls_room):
+    """
+    Transform a string of location into a tuple of building and room.
+
+    - If room is not specified, it will be N/A.
+    - If building abbreviation is in the global LOCATION dictionary,
+    it will be replaced with the full address and room will include
+    the building abbreviation at the start. Ex: H 521 SGW -> H521
+    :param cls_room: String. Ex: H 521 SGW
+    :return:
+    """
+    try:
+        building, room = cls_room.split(' ')[:2]
+    except ValueError:
+        building = cls_room
+        room = "N/A"
+
+    building = building.upper()
+    if building in LOCATION:
+        room = building + room
+        building = LOCATION[building]
+
+    return building, room
+
 
 def extract_table(filename):
     html = read_html(filename)

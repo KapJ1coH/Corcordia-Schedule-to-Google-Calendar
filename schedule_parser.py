@@ -1,4 +1,5 @@
 from datetime import datetime
+import json
 import re
 from dateutil.relativedelta import relativedelta, MO, TU, WE, TH, FR, SA, SU
 
@@ -59,14 +60,21 @@ This module is responsible for parsing the schedule from the course cart.
 """
 
 
+class ClassEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, (TimeBlock, Course)):
+            return obj.__dict__
+        return super().default(obj)
+
 class TimeBlock:
     """
     Represents a single event in a course.
     """
 
     def __init__(self, start_date, end_date, start_time, end_time, days, building, room, instructor, class_number,
-                 section):
+                 section, component):
         """
+        :param component:
         :type start_date: datetime        :type end_date:
         :param start_date: Class start date
         :param end_date: Class end date
@@ -78,6 +86,7 @@ class TimeBlock:
         :param instructor: Instructor of the class
         :param class_number: Class number
         :param section: Class section
+        :param component: What class it is. Ex: LEC
         """
         self.start_date = start_date
         self.end_date = end_date
@@ -89,6 +98,7 @@ class TimeBlock:
         self.instructor = instructor
         self.class_number = class_number
         self.section = section
+        self.component = component
 
     def next_weekday(self, start_date, day):
         match day:
@@ -122,28 +132,39 @@ class TimeBlock:
                f"Class number: {self.class_number}\n" \
                f"Section: {self.section}\n"
 
+    def empty_object_for_json(self):
+        self.start_date = None
+        self.end_date = None
+        self.start_time = None
+        self.end_time = None
+        self.days = None
+        self.building = None
+        self.room = None
+        self.instructor = None
+        self.class_number = None
+        # self.section = None
+        # self.component = None
+
 
 class Course:
     """
     This class represents a single course.
     """
 
-    def __init__(self, course_title, course_subtitle, course_number, course_section, course_session, course_credits,
+    def __init__(self, course_title, course_subtitle, course_credits,
                  events):
         self.course_title = course_title
         self.course_subtitle = course_subtitle
-        self.course_number = course_number
-        self.course_section = course_section
-        self.course_session = course_session
         self.course_credits = course_credits
         self.events = events
+
 
 
 class BreakLoopException(Exception):
     pass
 
 
-def parse_course_cart():
+def parse_course_cart(with_modifications=False):
     """
     Goes through the html table, and parses the course cart.
     Each block is one course with all the information.
@@ -156,9 +177,28 @@ def parse_course_cart():
 
     count = 0
 
+
     for i, block in enumerate(table.findChildren('tr', recursive=False)):
-        count = go_thru_each_class(block, count, i)
-    pass
+        count, course = go_thru_each_class(block, count, i)
+        courses[course.course_title] = course
+
+    if with_modifications:
+        # open a file with the modifications
+
+        # generate a dict to paste later
+        courses_temp = courses.copy()
+
+        # go through the dict
+        for key in courses_temp:
+            for event in courses_temp[key].events:
+                event.empty_object_for_json()
+
+        with open('modifications.json', 'w') as f:
+            f.write(json.dumps(courses_temp, indent=4, cls=ClassEncoder))
+
+        # TODO: check that json was modified. Maybe use a hashing thingy.
+        #  If modified, replace the values in Courses with data from JSON
+
 
 
 def go_thru_each_class(block, count, i):
@@ -171,6 +211,7 @@ def go_thru_each_class(block, count, i):
     :return:
     """
     class_name = block.find('h3', class_="ui-bar").text
+    class_name, class_subtitle = class_name.split(' - ')
     units = block.find('span', id=f'DERIVED_REGFRM1_UNT_TAKEN${i}').text
     time_blocks = []
     for row in block.find('table', id=f"CLASS_MTG_VW$scroll${i}").find('table', class_='ui-table').find(
@@ -185,8 +226,9 @@ def go_thru_each_class(block, count, i):
         except BreakLoopException:
             continue
         time_blocks.append(time_block)
+    course = Course(class_name, class_subtitle, units, time_blocks)
 
-    return count
+    return count, course
 
 
 def go_thru_each_timeblock(count, row):
@@ -229,8 +271,8 @@ def go_thru_each_timeblock(count, row):
         instructor=cls_instructor,
         start_date=start_date,
         end_date=end_date,
+        component=cls_component
     )
-    print(cls)
     count += 1
     return count, cls
 
@@ -299,4 +341,4 @@ def read_html(name):
 
 
 if __name__ == '__main__':
-    parse_course_cart()
+    parse_course_cart(True)

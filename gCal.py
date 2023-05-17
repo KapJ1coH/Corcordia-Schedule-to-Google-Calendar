@@ -12,6 +12,7 @@ from googleapiclient.errors import HttpError
 SCOPES = ['https://www.googleapis.com/auth/calendar']
 
 def main():
+
     courses = CourseExtraction.main()
     creds = None
     # Test calendar ID

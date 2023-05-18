@@ -1,7 +1,8 @@
+import os
 from datetime import datetime
 import json
-import re
 from dateutil.relativedelta import relativedelta, MO, TU, WE, TH, FR, SA, SU
+import hashlib
 
 from bs4 import BeautifulSoup
 
@@ -24,6 +25,15 @@ LOCATION = {
     "VA Building": "1395 René-Lévesque Boulevard West",
     "Webster Library": "1400 De Maisonneuve Boulevard West",
 
+}
+DAY_MAPPING = {
+    "MO": 0,
+    "TU": 1,
+    "WE": 2,
+    "TH": 3,
+    "FR": 4,
+    "SA": 5,
+    "SU": 6
 }
 
 """
@@ -100,24 +110,6 @@ class TimeBlock:
         self.section = section
         self.component = component
 
-    def next_weekday(self, start_date, day):
-        match day:
-            case "Mo":
-                return start_date + relativedelta(weekday=MO(1))
-            case "Tu":
-                return start_date + relativedelta(weekday=TU(1))
-            case "We":
-                return start_date + relativedelta(weekday=WE(1))
-            case "Th":
-                return start_date + relativedelta(weekday=TH(1))
-            case "Fr":
-                return start_date + relativedelta(weekday=FR(1))
-            case "Sa":
-                return start_date + relativedelta(weekday=SA(1))
-            case "Su":
-                return start_date + relativedelta(weekday=SU(1))
-            case _:
-                return start_date
 
     # to string method
     def __str__(self):
@@ -130,7 +122,11 @@ class TimeBlock:
                f"Room: {self.room}\n" \
                f"Instructor: {self.instructor}\n" \
                f"Class number: {self.class_number}\n" \
-               f"Section: {self.section}\n"
+               f"Section: {self.section}\n"\
+               f"Component: {self.component}\n"
+
+    def __repr__(self):
+        return self.__str__()
 
     def empty_object_for_json(self):
         self.start_date = None
@@ -158,6 +154,11 @@ class Course:
         self.course_credits = course_credits
         self.events = events
 
+    def __str__(self):
+        return f"Course title: {self.course_title}\n" \
+               f"Course subtitle: {self.course_subtitle}\n" \
+               f"Course credits: {self.course_credits}\n" \
+               f"Events: {self.events}\n"
 
 
 class BreakLoopException(Exception):
@@ -173,7 +174,6 @@ def parse_course_cart(with_modifications=False):
     courses = {}
     table = extract_table('summer_schedule_list_view.html').find('tbody')
 
-    units_regex = re.compile(r'DERIVED_REGFRM1_UNT_TAKEN$\d+')
 
     count = 0
 
@@ -183,23 +183,86 @@ def parse_course_cart(with_modifications=False):
         courses[course.course_title] = course
 
     if with_modifications:
-        # open a file with the modifications
+        modifications(courses)
 
-        # generate a dict to paste later
-        courses_temp = courses.copy()
-
-        # go through the dict
-        for key in courses_temp:
-            for event in courses_temp[key].events:
-                event.empty_object_for_json()
-
-        with open('modifications.json', 'w') as f:
-            f.write(json.dumps(courses_temp, indent=4, cls=ClassEncoder))
-
-        # TODO: check that json was modified. Maybe use a hashing thingy.
-        #  If modified, replace the values in Courses with data from JSON
+    courses = shift_start_date(courses)
+    for course in courses.values():
+        print(course)
+        print("\n\n")
 
 
+def modifications(courses):
+    """
+    Generates a JSON file with the current course structure and mostly null values.
+    Only the component and sections are filled in.
+
+    After creation of the JSON file, it is hashed and compared to the previous hash
+    after user modifications. If the hash is different, the user has modified the file
+    and the program will replace the values in Courses with the values in the JSON file.
+    """
+    if os.path.exists('modifications.json') and os.path.exists('modifications_hash.txt'):
+        modifications_hash = hashlib.md5(open('modifications.json', 'rb').read()).hexdigest()
+        with open('modifications_hash.txt', 'r') as f:
+            previous_hash = f.read()
+        if modifications_hash != previous_hash:
+            print("Modifications detected. Replacing values in Courses with values in modifications.json")
+            modify_courses(courses)
+            return None
+            # Continue here
+    # generate a dict to paste later
+    courses_temp = courses.copy()
+    # go through the dict
+    for key in courses_temp:
+        for event in courses_temp[key].events:
+            event.empty_object_for_json()
+    with open('modifications.json', 'w') as f:
+        f.write(json.dumps(courses_temp, indent=4, cls=ClassEncoder))
+    modifications_hash = hashlib.md5(open('modifications.json', 'rb').read()).hexdigest()
+    print(modifications_hash)
+    with open('modifications_hash.txt', 'w') as f:
+        f.write(modifications_hash)
+
+
+    print("No modifications detected. Exiting the program. "
+          "User has to modify JSON or have with_modifications=False")
+    exit()
+
+
+
+
+def modify_courses(courses):
+    """
+    Replaces the values in Courses with the values in the JSON file.
+    IMPORTANT: It cannot modify any time values. It can only modify strings.
+    :param courses: Courses object
+    :return:
+    """
+    with open('modifications.json', 'r') as f:
+        courses_dict = json.loads(f.read())
+    for key, value in courses_dict.items():
+        courses[key].course_title = value['course_title']
+        courses[key].course_subtitle = value['course_subtitle']
+        courses[key].course_credits = value['course_credits']
+        for i, event in enumerate(value['events']):
+            # check for nulls in the event
+            for key2, value2 in event.items():
+                if value2 is not None:
+                    courses[key].events[i].__setattr__(key2, value2)
+
+
+def shift_start_date(courses):
+    """
+    Shifts the start date of each event if the first day in days is not the same as the first day in start_date.
+    :param courses:
+    :return:
+    """
+    for key, value in courses.items():
+        for event in value.events:
+            if event.start_date is not None:
+                if event.start_date.weekday() != event.days[0]:
+                    weekday = DAY_MAPPING[event.days[0]]
+                    event.start_date = event.start_date + relativedelta(weekday=weekday)
+    return courses
 
 def go_thru_each_class(block, count, i):
     """

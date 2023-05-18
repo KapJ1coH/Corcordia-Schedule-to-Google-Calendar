@@ -72,7 +72,7 @@ class TimeBlock:
             self.start_time = datetime.datetime.strptime(time[0].strip(), "%H:%M").time()
             self.end_time = datetime.datetime.strptime(time[1].strip(), "%H:%M").time()
         else:
-            self.days += "," + day
+            self.days += f",{day}"
             self.start_date = self.next_weekday(start_date, day)
 
 
@@ -152,9 +152,8 @@ def extract_course_info_from_list(course_box):
 
     # Splits into the start and end dates
     term_temp = term_label.split(" - ")
-    term = {}
     current_year = datetime.datetime.now().year
-    term['Start'] = datetime.datetime.strptime(term_temp[0], "%b %d")
+    term = {'Start': datetime.datetime.strptime(term_temp[0], "%b %d")}
     term['Start'] = term['Start'].replace(year=current_year)
     term['End'] = datetime.datetime.strptime(term_temp[1], "%b %d")
     term['End'] = term['End'].replace(year=current_year)
@@ -168,24 +167,26 @@ def extract_course_info_from_list(course_box):
         block_type = row.find('strong', class_='type_block').text.strip()
         location = location_clean(row).split(" Rm ")
         if len(location) > 1:
-            location[-1] = "Room " + location[-1]
+            location[-1] = f"Room {location[-1]}"
 
         block = TimeBlock(course_title=course_title, block_type=block_type, location=location, instructor=instructor)
         # [:3] is to get the abbreviation of the block type only, ex "LEC" instead of "LEC AA"
         schedule[block_type[:3]] = block
 
-    course = Course(course_title, course_subtitle, session_label, term, instructor, units, schedule)
-
-    return course
+    return Course(
+        course_title,
+        course_subtitle,
+        session_label,
+        term,
+        instructor,
+        units,
+        schedule,
+    )
 
 
 def location_clean(row):
     location = row.find('span', class_='location_block').text.split("-")
-    if len(location) > 1:
-        return location[-1].strip()
-    else:
-        return ""
-    pass
+    return location[-1].strip() if len(location) > 1 else ""
 
 
 def read_html(name):
@@ -196,8 +197,7 @@ def read_html(name):
 def separate_course_info(text):
     # separate SOEN 287LEC into SOEN 287 and LEC
     course_pattern = r"([A-Za-z]+)(\s*\d+)([A-Za-z]+)"
-    match = re.match(course_pattern, text)
-    if match:
+    if match := re.match(course_pattern, text):
         crs_abbreviation, crs_number, block_type = match.groups()
         course_title = f"{crs_abbreviation}{crs_number}"
         return course_title, block_type
@@ -209,8 +209,7 @@ def extract_calendar(soup, courses):
     table = soup.find('table', class_='class-schedule__calendar')
     for hour in table.find_all('tr'):
         for day in hour.find_all('td'):
-            course_info = day.find('span', class_='class-label')
-            if course_info:
+            if course_info := day.find('span', class_='class-label'):
                 course_title, block_type = separate_course_info(course_info.text)
                 info = day.find('div', class_='class-info')
                 # split time by <br> tag
@@ -236,12 +235,10 @@ def main():
         courses = extract_calendar(soup, courses)
         summer_2 = read_html('summer_2_calendar.html')
         soup = BeautifulSoup(summer_2, 'html.parser')
-        courses = extract_calendar(soup, courses)
     else:
         term = read_html('calendar.html')
         soup = BeautifulSoup(term, 'html.parser')
-        courses = extract_calendar(soup, courses)
-
+    courses = extract_calendar(soup, courses)
     return courses
 
 

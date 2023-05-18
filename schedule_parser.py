@@ -1,7 +1,7 @@
 import os
 from datetime import datetime
 import json
-from dateutil.relativedelta import relativedelta, MO, TU, WE, TH, FR, SA, SU
+from dateutil.relativedelta import relativedelta
 import hashlib
 
 from bs4 import BeautifulSoup
@@ -53,7 +53,7 @@ New format:
 - Course has a list of events and general course info
 - Course contains start and end date, course instructor, course title, course subtitle, course number, course section, course session, course credits
 - Event contains start and end time, location, days of the week, recurrence rule
-    - Location should be a tuple of (building, room)
+    - Location should be a tuple of (address, room)
     - Building should be a string with the full address
     - No location --> Empty string
 
@@ -81,7 +81,7 @@ class TimeBlock:
     Represents a single event in a course.
     """
 
-    def __init__(self, start_date, end_date, start_time, end_time, days, building, room, instructor, class_number,
+    def __init__(self, start_date, end_date, start_time, end_time, days, address, room, instructor, class_number,
                  section, component):
         """
         :param component:
@@ -91,7 +91,7 @@ class TimeBlock:
         :param start_time: Class start time
         :param end_time: Class end time
         :param days: Days of the week the class is on
-        :param building: Building the class is in
+        :param address: Building the class is in
         :param room: Room the class is in
         :param instructor: Instructor of the class
         :param class_number: Class number
@@ -103,7 +103,7 @@ class TimeBlock:
         self.start_time = start_time
         self.end_time = end_time
         self.days = days
-        self.building = building
+        self.address = address
         self.room = room
         self.instructor = instructor
         self.class_number = class_number
@@ -118,7 +118,7 @@ class TimeBlock:
                f"Start time: {self.start_time}\n" \
                f"End time: {self.end_time}\n" \
                f"Days: {self.days}\n" \
-               f"Building: {self.building}\n" \
+               f"Address: {self.address}\n" \
                f"Room: {self.room}\n" \
                f"Instructor: {self.instructor}\n" \
                f"Class number: {self.class_number}\n" \
@@ -134,7 +134,7 @@ class TimeBlock:
         self.start_time = None
         self.end_time = None
         self.days = None
-        self.building = None
+        self.address = None
         self.room = None
         self.instructor = None
         self.class_number = None
@@ -149,15 +149,15 @@ class Course:
 
     def __init__(self, course_title, course_subtitle, course_credits,
                  events):
-        self.course_title = course_title
-        self.course_subtitle = course_subtitle
-        self.course_credits = course_credits
+        self.title = course_title
+        self.subtitle = course_subtitle
+        self.credits = course_credits
         self.events = events
 
     def __str__(self):
-        return f"Course title: {self.course_title}\n" \
-               f"Course subtitle: {self.course_subtitle}\n" \
-               f"Course credits: {self.course_credits}\n" \
+        return f"Course title: {self.title}\n" \
+               f"Course subtitle: {self.subtitle}\n" \
+               f"Course credits: {self.credits}\n" \
                f"Events: {self.events}\n"
 
 
@@ -165,14 +165,14 @@ class BreakLoopException(Exception):
     pass
 
 
-def parse_course_cart(with_modifications=False):
+def parse_course_cart(filename, with_modifications=False):
     """
     Goes through the html table, and parses the course cart.
     Each block is one course with all the information.
     :return: List of courses
     """
     courses = {}
-    table = extract_table('summer_schedule_list_view.html').find('tbody')
+    table = extract_table(filename).find('tbody')
 
 
     count = 0
@@ -180,7 +180,7 @@ def parse_course_cart(with_modifications=False):
 
     for i, block in enumerate(table.findChildren('tr', recursive=False)):
         count, course = go_thru_each_class(block, count, i)
-        courses[course.course_title] = course
+        courses[course.title] = course
 
     if with_modifications:
         modifications(courses)
@@ -189,6 +189,8 @@ def parse_course_cart(with_modifications=False):
     for course in courses.values():
         print(course)
         print("\n\n")
+
+    return courses
 
 
 def modifications(courses):
@@ -240,9 +242,9 @@ def modify_courses(courses):
     with open('modifications.json', 'r') as f:
         courses_dict = json.loads(f.read())
     for key, value in courses_dict.items():
-        courses[key].course_title = value['course_title']
-        courses[key].course_subtitle = value['course_subtitle']
-        courses[key].course_credits = value['course_credits']
+        courses[key].title = value['title']
+        courses[key].subtitle = value['subtitle']
+        courses[key].credits = value['credits']
         for i, event in enumerate(value['events']):
             # check for nulls in the event
             for key2, value2 in event.items():
@@ -329,7 +331,7 @@ def go_thru_each_timeblock(count, row):
         days=days,
         start_time=start_time,
         end_time=end_time,
-        building=building,
+        address=building,
         room=room,
         instructor=cls_instructor,
         start_date=start_date,
@@ -369,12 +371,12 @@ def clean_cls_dates(cls_dates):
 
 def clean_cls_room(cls_room):
     """
-    Transform a string of location into a tuple of building and room.
+    Transform a string of location into a tuple of address and room.
 
     - If room is not specified, it will be N/A.
-    - If building abbreviation is in the global LOCATION dictionary,
+    - If address abbreviation is in the global LOCATION dictionary,
     it will be replaced with the full address and room will include
-    the building abbreviation at the start. Ex: H 521 SGW -> H521
+    the address abbreviation at the start. Ex: H 521 SGW -> H521
     :param cls_room: String. Ex: H 521 SGW
     :return:
     """

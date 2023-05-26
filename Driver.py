@@ -2,8 +2,8 @@
 
 # TODO: Add a way to modify the calendar according to
 #  the university's academic calendar
-import gCal
-import schedule_parser
+import GcalApiIntegration
+import CourseScheduleParser
 
 
 def main():

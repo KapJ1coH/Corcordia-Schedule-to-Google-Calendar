@@ -1,0 +1,180 @@
+{
+    "COMP 249": {
+        "title": "COMP 249",
+        "subtitle": "OBJ-ORIENTED PROGRAMMING II",
+        "credits": "3.50",
+        "events": [
+            {
+                "start_date": null,
+                "end_date": null,
+                "start_time": null,
+                "end_time": null,
+                "days": null,
+                "address": null,
+                "room": null,
+                "instructor": null,
+                "class_number": null,
+                "section": "CCCG",
+                "component": "Tut"
+            },
+            {
+                "start_date": null,
+                "end_date": null,
+                "start_time": null,
+                "end_time": null,
+                "days": null,
+                "address": null,
+                "room": null,
+                "instructor": null,
+                "class_number": null,
+                "section": "CK-X",
+                "component": "Lab"
+            },
+            {
+                "start_date": null,
+                "end_date": null,
+                "start_time": null,
+                "end_time": null,
+                "days": null,
+                "address": null,
+                "room": null,
+                "instructor": null,
+                "class_number": null,
+                "section": "CC",
+                "component": "Lec"
+            }
+        ]
+    },
+    "ENGR 202": {
+        "title": "ENGR 202",
+        "subtitle": "Sustainable Development and Environmental Stewardship",
+        "credits": "1.50",
+        "events": [
+            {
+                "start_date": null,
+                "end_date": null,
+                "start_time": null,
+                "end_time": null,
+                "days": null,
+                "address": null,
+                "room": null,
+                "instructor": "Caroline Hachem-Vermette",
+                "class_number": null,
+                "section": "CD",
+                "component": "Lec"
+            }
+        ]
+    },
+    "ENGR 233": {
+        "title": "ENGR 233",
+        "subtitle": "APPLIED ADVANCED CALCULUS",
+        "credits": "3.00",
+        "events": [
+            {
+                "start_date": null,
+                "end_date": null,
+                "start_time": null,
+                "end_time": null,
+                "days": null,
+                "address": null,
+                "room": null,
+                "instructor": null,
+                "class_number": null,
+                "section": "AAAE",
+                "component": "Tut"
+            },
+            {
+                "start_date": null,
+                "end_date": null,
+                "start_time": null,
+                "end_time": null,
+                "days": null,
+                "address": null,
+                "room": null,
+                "instructor": null,
+                "class_number": null,
+                "section": "AA",
+                "component": "Lec"
+            }
+        ]
+    },
+    "SOEN 228": {
+        "title": "SOEN 228",
+        "subtitle": "SYSTEM HARDWARE",
+        "credits": "4.00",
+        "events": [
+            {
+                "start_date": null,
+                "end_date": null,
+                "start_time": null,
+                "end_time": null,
+                "days": null,
+                "address": null,
+                "room": null,
+                "instructor": null,
+                "class_number": null,
+                "section": "AA",
+                "component": "Lec"
+            },
+            {
+                "start_date": null,
+                "end_date": null,
+                "start_time": null,
+                "end_time": null,
+                "days": null,
+                "address": "1455 de Maisonneuve Boulevard West",
+                "room": "H564",
+                "instructor": null,
+                "class_number": null,
+                "section": "AAAE",
+                "component": "Tut"
+            },
+            {
+                "start_date": null,
+                "end_date": null,
+                "start_time": null,
+                "end_time": null,
+                "days": null,
+                "address": "1455 de Maisonneuve Boulevard West",
+                "room": "H968",
+                "instructor": null,
+                "class_number": null,
+                "section": "AI-X",
+                "component": "Lab"
+            }
+        ]
+    },
+    "SOEN 287": {
+        "title": "SOEN 287",
+        "subtitle": "WEB PROGRAMMING",
+        "credits": "3.00",
+        "events": [
+            {
+                "start_date": null,
+                "end_date": null,
+                "start_time": null,
+                "end_time": null,
+                "days": null,
+                "address": null,
+                "room": null,
+                "instructor": null,
+                "class_number": null,
+                "section": "CC",
+                "component": "Lec"
+            },
+            {
+                "start_date": null,
+                "end_date": null,
+                "start_time": null,
+                "end_time": null,
+                "days": null,
+                "address": null,
+                "room": null,
+                "instructor": null,
+                "class_number": null,
+                "section": "CCCF",
+                "component": "Tut"
+            }
+        ]
+    }
+}

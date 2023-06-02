@@ -386,6 +386,8 @@ def clean_cls_room(cls_room):
         building = cls_room
         room = "N/A"
 
+
+
     building = building.upper()
     if building in LOCATION:
         room = building + room

@@ -14,7 +14,6 @@ def scrape_academic_calendar():
 
     dates = list(extract_dates(soup))
     dates = list(clean_dates(dates))
-
     return dates
 
 def extract_dates(soup):

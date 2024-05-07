@@ -5,7 +5,7 @@ import datetime
 
 def get_calendar_page(url):
     page = requests.get(url)
-    return BeautifulSoup(page.content, 'html.parser')
+    return BeautifulSoup(page.content, "html.parser")
 
 
 def scrape_academic_calendar():
@@ -16,14 +16,16 @@ def scrape_academic_calendar():
     dates = list(clean_dates(dates))
     return dates
 
-def extract_dates(soup):
-    for section in soup.findAll('div', class_="c-list-featured-events section"):
-        for date in section.findAll('li'):
-            if "closed" in date.text:
-                day_month = date.text.strip().split('\n')[0]
-                year = section.find_previous_sibling("div", class_="c-wysiwyg wysiwyg section")
-                yield f"{day_month} {year.text.strip().split()[-1]}"
 
+def extract_dates(soup):
+    for section in soup.findAll("div", class_="c-list-featured-events section"):
+        for date in section.findAll("li"):
+            if "closed" in date.text:
+                day_month = date.text.strip().split("\n")[0]
+                year = section.find_previous_sibling(
+                    "div", class_="c-wysiwyg wysiwyg section"
+                )
+                yield f"{day_month} {year.text.strip().split()[-1]}"
 
 
 def clean_dates(dates):
@@ -48,5 +50,5 @@ def clean_dates(dates):
             yield date_return
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     scrape_academic_calendar()

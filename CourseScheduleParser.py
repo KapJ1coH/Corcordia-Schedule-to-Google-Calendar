@@ -24,17 +24,8 @@ LOCATION = {
     "SP Building": "2149 Mackay Street",
     "VA Building": "1395 René-Lévesque Boulevard West",
     "Webster Library": "1400 De Maisonneuve Boulevard West",
-
 }
-DAY_MAPPING = {
-    "MO": 0,
-    "TU": 1,
-    "WE": 2,
-    "TH": 3,
-    "FR": 4,
-    "SA": 5,
-    "SU": 6
-}
+DAY_MAPPING = {"MO": 0, "TU": 1, "WE": 2, "TH": 3, "FR": 4, "SA": 5, "SU": 6}
 
 """
 New format:
@@ -76,13 +67,26 @@ class ClassEncoder(json.JSONEncoder):
             return obj.__dict__
         return super().default(obj)
 
+
 class TimeBlock:
     """
     Represents a single event in a course.
     """
 
-    def __init__(self, start_date, end_date, start_time, end_time, days, address, room, instructor, class_number,
-                 section, component):
+    def __init__(
+        self,
+        start_date,
+        end_date,
+        start_time,
+        end_time,
+        days,
+        address,
+        room,
+        instructor,
+        class_number,
+        section,
+        component,
+    ):
         """
         :param component:
         :type start_date: datetime        :type end_date:
@@ -110,20 +114,21 @@ class TimeBlock:
         self.section = section
         self.component = component
 
-
     # to string method
     def __str__(self):
-        return f"Start date: {self.start_date}\n" \
-               f"End date: {self.end_date}\n" \
-               f"Start time: {self.start_time}\n" \
-               f"End time: {self.end_time}\n" \
-               f"Days: {self.days}\n" \
-               f"Address: {self.address}\n" \
-               f"Room: {self.room}\n" \
-               f"Instructor: {self.instructor}\n" \
-               f"Class number: {self.class_number}\n" \
-               f"Section: {self.section}\n"\
-               f"Component: {self.component}\n"
+        return (
+            f"Start date: {self.start_date}\n"
+            f"End date: {self.end_date}\n"
+            f"Start time: {self.start_time}\n"
+            f"End time: {self.end_time}\n"
+            f"Days: {self.days}\n"
+            f"Address: {self.address}\n"
+            f"Room: {self.room}\n"
+            f"Instructor: {self.instructor}\n"
+            f"Class number: {self.class_number}\n"
+            f"Section: {self.section}\n"
+            f"Component: {self.component}\n"
+        )
 
     def __repr__(self):
         return self.__str__()
@@ -147,18 +152,19 @@ class Course:
     This class represents a single course.
     """
 
-    def __init__(self, course_title, course_subtitle, course_credits,
-                 events):
+    def __init__(self, course_title, course_subtitle, course_credits, events):
         self.title = course_title
         self.subtitle = course_subtitle
         self.credits = course_credits
         self.events = events
 
     def __str__(self):
-        return f"Course title: {self.title}\n" \
-               f"Course subtitle: {self.subtitle}\n" \
-               f"Course credits: {self.credits}\n" \
-               f"Events: {self.events}\n"
+        return (
+            f"Course title: {self.title}\n"
+            f"Course subtitle: {self.subtitle}\n"
+            f"Course credits: {self.credits}\n"
+            f"Events: {self.events}\n"
+        )
 
 
 class BreakLoopException(Exception):
@@ -172,13 +178,11 @@ def parse_course_cart(filename, with_modifications=False):
     :return: List of courses
     """
     courses = {}
-    table = extract_table(filename).find('tbody')
-
+    table = extract_table(filename).find("tbody")
 
     count = 0
 
-
-    for i, block in enumerate(table.findChildren('tr', recursive=False)):
+    for i, block in enumerate(table.findChildren("tr", recursive=False)):
         count, course = go_thru_each_class(block, count, i)
         courses[course.title] = course
 
@@ -202,12 +206,18 @@ def modifications(courses):
     after user modifications. If the hash is different, the user has modified the file
     and the program will replace the values in Courses with the values in the JSON file.
     """
-    if os.path.exists('modifications.json') and os.path.exists('modifications_hash.txt'):
-        modifications_hash = hashlib.md5(open('modifications.json', 'rb').read()).hexdigest()
-        with open('modifications_hash.txt', 'r') as f:
+    if os.path.exists("modifications.json") and os.path.exists(
+        "modifications_hash.txt"
+    ):
+        modifications_hash = hashlib.md5(
+            open("modifications.json", "rb").read()
+        ).hexdigest()
+        with open("modifications_hash.txt", "r") as f:
             previous_hash = f.read()
         if modifications_hash != previous_hash:
-            print("Modifications detected. Replacing values in Courses with values in modifications.json")
+            print(
+                "Modifications detected. Replacing values in Courses with values in modifications.json"
+            )
             modify_courses(courses)
             return None
             # Continue here
@@ -217,19 +227,20 @@ def modifications(courses):
     for key in courses_temp:
         for event in courses_temp[key].events:
             event.empty_object_for_json()
-    with open('modifications.json', 'w') as f:
+    with open("modifications.json", "w") as f:
         f.write(json.dumps(courses_temp, indent=4, cls=ClassEncoder))
-    modifications_hash = hashlib.md5(open('modifications.json', 'rb').read()).hexdigest()
+    modifications_hash = hashlib.md5(
+        open("modifications.json", "rb").read()
+    ).hexdigest()
     print(modifications_hash)
-    with open('modifications_hash.txt', 'w') as f:
+    with open("modifications_hash.txt", "w") as f:
         f.write(modifications_hash)
 
-
-    print("No modifications detected. Exiting the program. "
-          "User has to modify JSON or have with_modifications=False")
+    print(
+        "No modifications detected. Exiting the program. "
+        "User has to modify JSON or have with_modifications=False"
+    )
     exit()
-
-
 
 
 def modify_courses(courses):
@@ -239,13 +250,13 @@ def modify_courses(courses):
     :param courses: Courses object
     :return:
     """
-    with open('modifications.json', 'r') as f:
+    with open("modifications.json", "r") as f:
         courses_dict = json.loads(f.read())
     for key, value in courses_dict.items():
-        courses[key].title = value['title']
-        courses[key].subtitle = value['subtitle']
-        courses[key].credits = value['credits']
-        for i, event in enumerate(value['events']):
+        courses[key].title = value["title"]
+        courses[key].subtitle = value["subtitle"]
+        courses[key].credits = value["credits"]
+        for i, event in enumerate(value["events"]):
             # check for nulls in the event
             for key2, value2 in event.items():
                 if value2 is not None:
@@ -266,6 +277,7 @@ def shift_start_date(courses):
                     event.start_date = event.start_date + relativedelta(weekday=weekday)
     return courses
 
+
 def go_thru_each_class(block, count, i):
     """
     Goes through each class in the table of usually 5 classes.
@@ -275,15 +287,19 @@ def go_thru_each_class(block, count, i):
     :param i: Used to find unique ids of classes
     :return:
     """
-    class_name = block.find('h3', class_="ui-bar").text
-    class_name, class_subtitle = class_name.split(' - ')
-    units = block.find('span', id=f'DERIVED_REGFRM1_UNT_TAKEN${i}').text
+    class_name = block.find("h3", class_="ui-bar").text
+    class_name, class_subtitle = class_name.split(" - ")
+    units = block.find("span", id=f"DERIVED_REGFRM1_UNT_TAKEN${i}").text
     time_blocks = []
-    for row in block.find('table', id=f"CLASS_MTG_VW$scroll${i}").find('table', class_='ui-table').find(
-            'tbody').findAll('tr'):
+    for row in (
+        block.find("table", id=f"CLASS_MTG_VW$scroll${i}")
+        .find("table", class_="ui-table")
+        .find("tbody")
+        .findAll("tr")
+    ):
         """
         Example data extracted:
-        3103 CCCG Tutorial MoWe 6:30PM - 8:10PM H 521 SGW JOUMANA DARGHAM 
+        3103 CCCG Tutorial MoWe 6:30PM - 8:10PM H 521 SGW JOUMANA DARGHAM
         03/07/2023 - 10/08/2023
         """
         try:
@@ -305,24 +321,24 @@ def go_thru_each_timeblock(count, row):
     :return: Count: Updated count, time_block: TimeBlock object
     """
     cls_number = ""
-    if not (cls_number := row.find('span', id=f"DERIVED_CLS_DTL_CLASS_NBR${count}")):
+    if not (cls_number := row.find("span", id=f"DERIVED_CLS_DTL_CLASS_NBR${count}")):
         print("No class number found")
         raise BreakLoopException
 
     cls_number = cls_number.text
-    cls_section = row.find('a', id=f"MTG_SECTION${count}").text
+    cls_section = row.find("a", id=f"MTG_SECTION${count}").text
 
     # :3 to shorten from Lecture to Lec
-    cls_component = row.find('span', id=f"MTG_COMP${count}").text[:3]
+    cls_component = row.find("span", id=f"MTG_COMP${count}").text[:3]
 
-    cls_day_time = row.find('span', id=f"MTG_SCHED${count}").text
+    cls_day_time = row.find("span", id=f"MTG_SCHED${count}").text
     days, start_time, end_time = clean_cls_day_time(cls_day_time)
 
-    cls_room = row.find('span', id=f"MTG_LOC${count}").text
+    cls_room = row.find("span", id=f"MTG_LOC${count}").text
     building, room = clean_cls_room(cls_room)
-    cls_instructor = row.find('span', id=f"DERIVED_CLS_DTL_SSR_INSTR_LONG${count}").text
+    cls_instructor = row.find("span", id=f"DERIVED_CLS_DTL_SSR_INSTR_LONG${count}").text
 
-    cls_dates = row.find('span', id=f"MTG_DATES${count}").text
+    cls_dates = row.find("span", id=f"MTG_DATES${count}").text
     start_date, end_date = clean_cls_dates(cls_dates)
 
     cls = TimeBlock(
@@ -336,7 +352,7 @@ def go_thru_each_timeblock(count, row):
         instructor=cls_instructor,
         start_date=start_date,
         end_date=end_date,
-        component=cls_component
+        component=cls_component,
     )
     count += 1
     return count, cls
@@ -348,12 +364,12 @@ def clean_cls_day_time(cls_day_time):
     :param cls_day_time: String. Ex: MoWe 6:30PM - 8:10PM
     :return: String, String, datetime.time, datetime.time. Ex: MO,WE,18:30,20:10
     """
-    days, time = cls_day_time.split(' ', 1)
+    days, time = cls_day_time.split(" ", 1)
     # Split days string into groups of 2 strings. Ex: MoWe -> [MO, WE]
-    days = [days[i:i + 2].upper() for i in range(0, len(days), 2)]
-    start_time, end_time = time.split(' - ')
-    start_time = datetime.strptime(start_time, '%I:%M%p').time()
-    end_time = datetime.strptime(end_time, '%I:%M%p').time()
+    days = [days[i : i + 2].upper() for i in range(0, len(days), 2)]
+    start_time, end_time = time.split(" - ")
+    start_time = datetime.strptime(start_time, "%I:%M%p").time()
+    end_time = datetime.strptime(end_time, "%I:%M%p").time()
     return days, start_time, end_time
 
 
@@ -363,9 +379,9 @@ def clean_cls_dates(cls_dates):
     :param cls_dates: String. Ex: 03/07/2023 - 10/08/2023
     :return: datetime.date, datetime.date. Ex: 2023-03-07, 2023-10-08
     """
-    start_date, end_date = cls_dates.split(' - ')
-    start_date = datetime.strptime(start_date, '%d/%m/%Y').date()
-    end_date = datetime.strptime(end_date, '%d/%m/%Y').date()
+    start_date, end_date = cls_dates.split(" - ")
+    start_date = datetime.strptime(start_date, "%d/%m/%Y").date()
+    end_date = datetime.strptime(end_date, "%d/%m/%Y").date()
     return start_date, end_date
 
 
@@ -381,12 +397,10 @@ def clean_cls_room(cls_room):
     :return:
     """
     try:
-        building, room = cls_room.split(' ')[:2]
+        building, room = cls_room.split(" ")[:2]
     except ValueError:
         building = cls_room
         room = "N/A"
-
-
 
     building = building.upper()
     if building in LOCATION:
@@ -398,14 +412,14 @@ def clean_cls_room(cls_room):
 
 def extract_table(filename):
     html = read_html(filename)
-    soup = BeautifulSoup(html, 'html.parser')
-    return soup.find('table', id='ACE_STDNT_ENRL_SSV2$0')
+    soup = BeautifulSoup(html, "html.parser")
+    return soup.find("table", id="ACE_STDNT_ENRL_SSV2$0")
 
 
 def read_html(name):
-    with open(name, 'r') as f:
+    with open(name, "r") as f:
         return f.read()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     parse_course_cart(True)

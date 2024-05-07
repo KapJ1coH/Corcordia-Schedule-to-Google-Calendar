@@ -10,10 +10,11 @@ import CourseScheduleParser
 def main():
     delete_or_not()
 
-    filename = 'summer_schedule_list_view.html'
+    filename = "summer_schedule_list_view.html"
     with_modifications = True
     courses = CourseScheduleParser.parse_course_cart(
-        with_modifications=with_modifications, filename=filename)
+        with_modifications=with_modifications, filename=filename
+    )
     status = GcalApiIntegration.main(courses)
     print(status)
 
@@ -21,20 +22,21 @@ def main():
 def delete_or_not():
     print("Delete anything? (y/n)")
     delete_choice = input()
-    if delete_choice == 'n':
+    if delete_choice == "n":
         return None
 
     print("From the start or a specific date? (s/d)")
     date_choice = input()
-    if date_choice == 'd':
+    if date_choice == "d":
         date = None
         delete_from_date(date)
-    elif date_choice == 's':
+    elif date_choice == "s":
         GcalApiIntegration.delete_all_events()
         exit(0)
     else:
         print("Invalid choice, exiting...")
         exit(1)
+
 
 def delete_from_date(date):
     flag = 0
@@ -51,5 +53,5 @@ def delete_from_date(date):
     exit(0)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
